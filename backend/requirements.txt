@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+openai-whisper
+yt-dlp
+curl-cffi>=0.10,<0.16
+python-multipart
+
