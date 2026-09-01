@@ -1,5 +1,5 @@
-```html
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -45,18 +45,17 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
 
-    input[type="text"] {
+    input[type="url"] {
       width: 100%;
       padding: 15px;
-      border: 2px solid #d1d5db;
+      border: 2px solid #e5e7eb;
       border-radius: 12px;
       background: #fafafa;
-      margin-bottom: 15px;
       font-size: 16px;
       outline: none;
     }
 
-    input[type="text"]:focus {
+    input[type="url"]:focus {
       border-color: #111827;
     }
 
@@ -68,7 +67,7 @@
       font-size: 17px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 12px;
     }
 
     #transcribeBtn {
@@ -111,57 +110,60 @@
     }
 
     .hint {
-      font-size: 14px;
-      color: #6b7280;
-      margin-top: 8px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #9ca3af;
     }
   </style>
+
 </head>
 
 <body>
 
   <div class="container">
 
-    <h1>🎙️ Whisper Transcriber</h1>
+```
+<h1>🎙️ Whisper Transcriber</h1>
 
-    <div class="subtitle">
-      Transcribe TikTok videos with Whisper
-    </div>
+<div class="subtitle">
+  Transcribe TikTok videos with Whisper
+</div>
 
-    <div class="card">
+<div class="card">
 
-      <input
-        type="text"
-        id="tiktokUrl"
-        placeholder="Paste TikTok link here..."
-        autocomplete="off"
-      >
+  <input
+    type="url"
+    id="tiktokUrl"
+    placeholder="Paste TikTok link here..."
+    autocomplete="off"
+  >
 
-      <div class="hint">
-        Example: https://www.tiktok.com/@user/video/...
-      </div>
+  <div class="hint">
+    Example: https://www.tiktok.com/@user/video/...
+  </div>
 
-      <button id="transcribeBtn">
-        Transcribe
-      </button>
+  <button id="transcribeBtn">
+    🎙️ Transcribe
+  </button>
 
-      <div id="status"></div>
+  <div id="status"></div>
 
-      <textarea
-        id="result"
-        class="hidden"
-        placeholder="Your transcription will appear here..."
-        readonly
-      ></textarea>
+  <textarea
+    id="result"
+    class="hidden"
+    placeholder="Your transcription will appear here..."
+    readonly
+  ></textarea>
 
-      <button
-        id="copyBtn"
-        class="hidden"
-      >
-        📋 Copy transcription
-      </button>
+  <button
+    id="copyBtn"
+    class="hidden"
+  >
+    📋 Copy transcription
+  </button>
 
-    </div>
+</div>
+```
 
   </div>
 
@@ -192,10 +194,11 @@ tiktokUrl.addEventListener("input", () => {
 
   transcribeBtn.disabled = !url;
 
-  result.classList.add("hidden");
-  copyBtn.classList.add("hidden");
-
-  status.textContent = "";
+  if (!url) {
+    status.textContent = "";
+    result.classList.add("hidden");
+    copyBtn.classList.add("hidden");
+  }
 
 });
 
@@ -206,7 +209,18 @@ transcribeBtn.addEventListener("click", async () => {
 
   if (!url) {
     status.textContent =
-      "❌ Please paste a TikTok URL.";
+      "⚠️ Please paste a TikTok URL.";
+
+    return;
+  }
+
+  if (
+    !url.includes("tiktok.com") &&
+    !url.includes("vm.tiktok.com")
+  ) {
+    status.textContent =
+      "⚠️ Please enter a valid TikTok URL.";
+
     return;
   }
 
@@ -221,7 +235,6 @@ transcribeBtn.addEventListener("click", async () => {
   try {
 
     const response = await fetch(API_URL, {
-
       method: "POST",
 
       headers: {
@@ -231,39 +244,26 @@ transcribeBtn.addEventListener("click", async () => {
       body: JSON.stringify({
         url: url
       })
-
     });
 
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(
+        `Server error: ${response.status}`
+      );
+    }
 
     if (!response.ok) {
 
-      let errorMessage =
-        `Server error: ${response.status}`;
-
-      try {
-
-        const errorData =
-          await response.json();
-
-        if (errorData.detail) {
-          errorMessage =
-            errorData.detail;
-        }
-
-      } catch (e) {}
-
-      throw new Error(errorMessage);
+      throw new Error(
+        data.detail ||
+        `Server error: ${response.status}`
+      );
 
     }
-
-
-    status.textContent =
-      "🎙️ Video downloaded. Whisper is transcribing...";
-
-
-    const data =
-      await response.json();
-
 
     if (!data.text) {
 
@@ -273,16 +273,16 @@ transcribeBtn.addEventListener("click", async () => {
 
     }
 
-
-    result.value =
-      data.text;
+    result.value = data.text;
 
     result.classList.remove("hidden");
     copyBtn.classList.remove("hidden");
 
     status.textContent =
-      "✅ Transcription completed.";
-
+      `✅ Transcription completed` +
+      (data.language
+        ? ` • Language: ${data.language}`
+        : "");
 
   } catch (error) {
 
@@ -318,7 +318,6 @@ copyBtn.addEventListener("click", async () => {
 
     }, 2000);
 
-
   } catch (error) {
 
     result.select();
@@ -336,4 +335,3 @@ copyBtn.addEventListener("click", async () => {
 
 </body>
 </html>
-```
