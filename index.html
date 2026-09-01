@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,13 +45,19 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
 
-    input[type="file"] {
+    input[type="text"] {
       width: 100%;
       padding: 15px;
-      border: 2px dashed #d1d5db;
+      border: 2px solid #d1d5db;
       border-radius: 12px;
       background: #fafafa;
       margin-bottom: 15px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: #111827;
     }
 
     button {
@@ -71,6 +78,7 @@
 
     #transcribeBtn:disabled {
       opacity: 0.5;
+      cursor: not-allowed;
     }
 
     #copyBtn {
@@ -82,6 +90,7 @@
       text-align: center;
       margin: 20px 0;
       color: #6b7280;
+      line-height: 1.5;
     }
 
     #result {
@@ -101,11 +110,10 @@
       display: none;
     }
 
-    .filename {
-      margin-top: 10px;
+    .hint {
       font-size: 14px;
       color: #6b7280;
-      word-break: break-all;
+      margin-top: 8px;
     }
   </style>
 </head>
@@ -117,20 +125,23 @@
     <h1>🎙️ Whisper Transcriber</h1>
 
     <div class="subtitle">
-      Transcribe your audio with Whisper
+      Transcribe TikTok videos with Whisper
     </div>
 
     <div class="card">
 
-     <input
-  type="file"
-  id="audioFile"
-  accept=".mp3,.m4a,.wav,.aac,.ogg"
->
+      <input
+        type="text"
+        id="tiktokUrl"
+        placeholder="Paste TikTok link here..."
+        autocomplete="off"
+      >
 
-      <div id="filename" class="filename"></div>
+      <div class="hint">
+        Example: https://www.tiktok.com/@user/video/...
+      </div>
 
-      <button id="transcribeBtn" disabled>
+      <button id="transcribeBtn">
         Transcribe
       </button>
 
@@ -157,10 +168,10 @@
 <script>
 
 const API_URL =
-  "https://whisper-api.fly.dev/transcribe";
+  "https://whisper-api.fly.dev/tiktok";
 
-const audioFile =
-  document.getElementById("audioFile");
+const tiktokUrl =
+  document.getElementById("tiktokUrl");
 
 const transcribeBtn =
   document.getElementById("transcribeBtn");
@@ -174,67 +185,85 @@ const status =
 const copyBtn =
   document.getElementById("copyBtn");
 
-const filename =
-  document.getElementById("filename");
 
+tiktokUrl.addEventListener("input", () => {
 
-audioFile.addEventListener("change", () => {
+  const url = tiktokUrl.value.trim();
 
-  const file = audioFile.files[0];
-
-  if (!file) {
-    transcribeBtn.disabled = true;
-    filename.textContent = "";
-    return;
-  }
-
-  filename.textContent =
-    `Selected: ${file.name}`;
-
-  transcribeBtn.disabled = false;
+  transcribeBtn.disabled = !url;
 
   result.classList.add("hidden");
   copyBtn.classList.add("hidden");
+
+  status.textContent = "";
 
 });
 
 
 transcribeBtn.addEventListener("click", async () => {
 
-  const file = audioFile.files[0];
+  const url = tiktokUrl.value.trim();
 
-  if (!file) {
+  if (!url) {
+    status.textContent =
+      "❌ Please paste a TikTok URL.";
     return;
   }
 
   transcribeBtn.disabled = true;
 
-  status.textContent =
-    "⏳ Transcribing... Please wait.";
-
   result.classList.add("hidden");
   copyBtn.classList.add("hidden");
 
-  const formData = new FormData();
-
-  formData.append("file", file, file.name);
+  status.textContent =
+    "⏳ Downloading TikTok video...";
 
   try {
 
     const response = await fetch(API_URL, {
+
       method: "POST",
-      body: formData
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        url: url
+      })
+
     });
+
 
     if (!response.ok) {
 
-      throw new Error(
-        `Server error: ${response.status}`
-      );
+      let errorMessage =
+        `Server error: ${response.status}`;
+
+      try {
+
+        const errorData =
+          await response.json();
+
+        if (errorData.detail) {
+          errorMessage =
+            errorData.detail;
+        }
+
+      } catch (e) {}
+
+      throw new Error(errorMessage);
 
     }
 
-    const data = await response.json();
+
+    status.textContent =
+      "🎙️ Video downloaded. Whisper is transcribing...";
+
+
+    const data =
+      await response.json();
+
 
     if (!data.text) {
 
@@ -244,13 +273,16 @@ transcribeBtn.addEventListener("click", async () => {
 
     }
 
-    result.value = data.text;
+
+    result.value =
+      data.text;
 
     result.classList.remove("hidden");
     copyBtn.classList.remove("hidden");
 
     status.textContent =
       "✅ Transcription completed.";
+
 
   } catch (error) {
 
@@ -285,6 +317,7 @@ copyBtn.addEventListener("click", async () => {
         "📋 Copy transcription";
 
     }, 2000);
+
 
   } catch (error) {
 
